@@ -86,28 +86,35 @@ class TestBrowserWindows(unittest.TestCase):
             # Expand the "Alerts, Frame & Windows" section with retries
             self.expand_section_with_retry("Alerts, Frame & Windows")
 
-            # Capturar o HTML da página para depuração antes de localizar o elemento
-            with open("debug_before_locating.html", "w", encoding="utf-8") as f:
-                f.write(self.driver.page_source)
-
             # Garantir que o elemento esteja visível antes de interagir
             alerts_frame_windows = wait.until(
-                EC.presence_of_element_located((By.XPATH, "//h5[text()='Alerts, Frame & Windows']"))
+                EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'header-text') and contains(text(), 'Alerts, Frame & Windows')]"))
             )
             self.scroll_to_element(alerts_frame_windows)
             alerts_frame_windows.click()
-        except Exception as e:
+        except TimeoutException as e:
             # Capturar o HTML da página para depuração
-            with open("debug_error.html", "w", encoding="utf-8") as f:
+            with open("debug_error_after_expand.html", "w", encoding="utf-8") as f:
                 f.write(self.driver.page_source)
+            print("Erro: Não foi possível localizar o elemento 'Alerts, Frame & Windows'.")
+            raise e
+        except Exception as e:
+            print(f"Erro inesperado: {e}")
             raise e
 
         # Continuar com o restante do teste
-        new_window_button = wait.until(
-            EC.element_to_be_clickable((By.ID, "windowButton"))
-        )
-        self.scroll_to_element(new_window_button)
-        new_window_button.click()
+        try:
+            new_window_button = wait.until(
+                EC.element_to_be_clickable((By.ID, "windowButton"))
+            )
+            self.scroll_to_element(new_window_button)
+            new_window_button.click()
+            print("Botão 'New Window' clicado com sucesso.")
+        except Exception as e:
+            print(f"Erro ao clicar no botão 'New Window': {e}")
+            # Fallback: Usar JavaScript para clicar
+            self.driver.execute_script("document.getElementById('windowButton').click();")
+            print("Botão 'New Window' clicado usando JavaScript.")
 
         # Alternar para a nova janela
         self.driver.switch_to.window(self.driver.window_handles[1])
@@ -117,6 +124,12 @@ class TestBrowserWindows(unittest.TestCase):
             EC.presence_of_element_located((By.ID, "sampleHeading"))
         )
         assert sample_heading.text == "This is a sample page", "Texto incorreto na nova janela"
+
+        # Fechar a nova janela aberta
+        self.driver.close()
+
+        # Voltar para a janela original
+        self.driver.switch_to.window(self.driver.window_handles[0])
 
     def tearDown(self):
         self.driver.quit()
