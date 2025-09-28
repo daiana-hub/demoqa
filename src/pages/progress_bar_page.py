@@ -26,12 +26,21 @@ class ProgressBarPage:
         ).click()
 
     def get_progress_value(self):
-        progress_text = self.driver.find_element(*self.progress_bar).text
-        return int(progress_text.replace('%', ''))
+        """
+        Captura o valor do progresso, garantindo que o texto não esteja vazio.
+        """
+        progress_text = WebDriverWait(self.driver, 10).until(
+            lambda driver: driver.find_element(*self.progress_bar).text
+        )
+        if progress_text.strip():
+            return int(progress_text.replace('%', ''))
+        return 0
 
     def wait_until_progress(self, target_percentage):
-        while True:
-            progress = self.get_progress_value()
-            if progress >= target_percentage:
-                break
-            time.sleep(0.1)
+        """
+        Aguarda até que o progresso atinja o valor desejado, garantindo que o texto não esteja vazio.
+        """
+        WebDriverWait(self.driver, 10).until(
+            lambda driver: self.get_progress_value() >= target_percentage,
+            message=f"O progresso não atingiu {target_percentage}% dentro do tempo limite."
+        )

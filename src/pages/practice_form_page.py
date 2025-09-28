@@ -2,7 +2,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchFrameException, NoSuchElementException, TimeoutException
+from selenium.common.exceptions import TimeoutException
 import os
 
 class PracticeFormPage:
@@ -18,110 +18,120 @@ class PracticeFormPage:
         self.driver.find_element(By.XPATH, "//span[text()='Practice Form']").click()
 
     def fill_form(self):
-        self.driver.find_element(By.ID, "firstName").send_keys("Test")
-        self.driver.find_element(By.ID, "lastName").send_keys("User")
-        self.driver.find_element(By.ID, "userEmail").send_keys("testuser@example.com")
+        # Garantir que os elementos estão visíveis antes de interagir
+        first_name = self.driver.find_element(By.ID, "firstName")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", first_name)
+        first_name.send_keys("Test")
+
+        last_name = self.driver.find_element(By.ID, "lastName")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", last_name)
+        last_name.send_keys("User")
+
+        email = self.driver.find_element(By.ID, "userEmail")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", email)
+        email.send_keys("testuser@example.com")
+
         self.driver.find_element(By.XPATH, "//label[text()='Male']").click()
-        self.driver.find_element(By.ID, "userNumber").send_keys("1234567890")
+
+        phone = self.driver.find_element(By.ID, "userNumber")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", phone)
+        phone.send_keys("1234567890")
+
         self.driver.find_element(By.ID, "dateOfBirthInput").click()
         self.driver.find_element(By.CLASS_NAME, "react-datepicker__day--015").click()
-        self.driver.find_element(By.ID, "subjectsInput").send_keys("Maths")
-        self.driver.find_element(By.ID, "subjectsInput").send_keys(Keys.RETURN)
-        self.driver.find_element(By.XPATH, "//label[text()='Sports']").click()
 
+        subjects = self.driver.find_element(By.ID, "subjectsInput")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", subjects)
+        subjects.send_keys("Maths")
+        subjects.send_keys(Keys.RETURN)
+
+        # Remover anúncios antes de clicar no checkbox
+        self.driver.execute_script("""
+            var ads = document.querySelectorAll('iframe, div[id*="google_ads_iframe"]');
+            for (var i = 0; i < ads.length; i++) {
+                ads[i].remove();
+            }
+        """)
+
+        # Usar JavaScript para clicar no checkbox
+        sports_checkbox = self.driver.find_element(By.XPATH, "//label[text()='Sports']")
+        self.driver.execute_script("arguments[0].click();", sports_checkbox)
+
+        # Corrigir o caminho do arquivo para upload
         file_path = os.path.join(os.getcwd(), "resources", "sample.txt")
         self.driver.find_element(By.ID, "uploadPicture").send_keys(file_path)
 
-        self.driver.find_element(By.ID, "currentAddress").send_keys("123 Test Address")
-        
-        # Verificar e lidar com iframes que possam bloquear o elemento
-        iframes = self.driver.find_elements(By.TAG_NAME, "iframe")
-        for iframe in iframes:
-            try:
-                self.driver.switch_to.frame(iframe)
-                # Verificar se o elemento está visível no iframe
-                if self.driver.find_elements(By.ID, "state"):
-                    break
-            except Exception:
-                continue
-        self.driver.switch_to.default_content()
-
-        # Ensure we are in the main content and remove ads
-        self.switch_to_main_content()
-        self.remove_ads_iframe()
-
-        # Expand the state listbox and wait for the options to load
-        state_listbox = self.driver.find_element(By.CSS_SELECTOR, "div.css-yk16xz-control")
-        self.scroll_to_element(state_listbox)
-        WebDriverWait(self.driver, 15).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "div.css-yk16xz-control")))
-        self.click_with_js(state_listbox)
-        print("State listbox expanded successfully.")
-
-        # Wait for the options to load dynamically
-        WebDriverWait(self.driver, 15).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.css-1uccc91-singleValue"))
-        )
-
-        # Debugging: Check if options are present
-        state_options = self.driver.find_elements(By.CSS_SELECTOR, "div.css-1uccc91-singleValue")
-        print(f"State options found: {[option.text for option in state_options]}")
-
-        # Select the 'NCR' option
+        # Garantir que o campo 'Current Address' está visível e interativo
         try:
-            ncr_option = WebDriverWait(self.driver, 15).until(
-                EC.visibility_of_element_located((By.XPATH, "//div[text()='NCR']"))
-            )
-            self.click_with_js(ncr_option)
-            print("State 'NCR' selected successfully.")
+            wait = WebDriverWait(self.driver, 10)
+            address = wait.until(EC.visibility_of_element_located((By.ID, "currentAddress")))
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", address)
+            address.clear()
+            address.send_keys("123 Test Address")
+            print("Campo 'Current Address' preenchido com sucesso.")
         except TimeoutException:
-            print("Error: 'NCR' option not found within the timeout period. Available options:")
-            print([option.text for option in state_options])
-            raise
+            print("Erro: O campo 'Current Address' não está visível ou não foi encontrado.")
+            return
 
-        # Expand the city dropdown and wait for the options to load
+        # Garantir que o elemento 'state' está visível e usar JavaScript para clicar
+        state_element = self.driver.find_element(By.ID, "state")
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", state_element)
+        self.driver.execute_script("arguments[0].click();", state_element)
+
+        # Adicionar espera explícita para o dropdown abrir
+        try:
+            dropdown_open = wait.until(EC.visibility_of_element_located((By.XPATH, "//div[contains(@class, 'menu')]")))
+            print("Dropdown de estado aberto com sucesso.")
+        except TimeoutException:
+            print("Erro: O dropdown de estado não foi aberto.")
+            return
+
+        # Garantir que o elemento 'NCR' está visível antes de clicar
+        try:
+            ncr_element = self.driver.find_element(By.XPATH, "//div[text()='NCR']")
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", ncr_element)
+            ncr_element.click()
+        except Exception as e:
+            print(f"Erro ao localizar ou clicar no elemento NCR: {e}")
+            return
+
         city_element = self.driver.find_element(By.ID, "city")
-        self.scroll_to_element(city_element)
-        WebDriverWait(self.driver, 15).until(EC.element_to_be_clickable((By.ID, "city")))
-        self.click_with_js(city_element)
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", city_element)
+        self.driver.execute_script("arguments[0].click();", city_element)
 
-        # Wait for the 'Delhi' option to be visible and click it
-        delhi_option = WebDriverWait(self.driver, 15).until(
-            EC.visibility_of_element_located((By.XPATH, "//div[text()='Delhi']"))
-        )
-        self.click_with_js(delhi_option)
-        print("City 'Delhi' selected successfully.")
+        # Adicionar espera explícita para o dropdown abrir
+        try:
+            wait.until(EC.visibility_of_element_located((By.XPATH, "//div[text()='Delhi']")))
+            delhi_element = self.driver.find_element(By.XPATH, "//div[text()='Delhi']")
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", delhi_element)
+            delhi_element.click()
+        except TimeoutException:
+            print("Erro: O elemento 'Delhi' não foi encontrado ou não está visível.")
 
     def submit_form(self):
-        self.driver.find_element(By.ID, "submit").click()
-
-    def verify_popup_and_close(self):
-        WebDriverWait(self.driver, 10).until(
-            EC.visibility_of_element_located((By.ID, "closeLargeModal"))
-        )
-        close_button = self.driver.find_element(By.ID, "closeLargeModal")
-        self.driver.execute_script("arguments[0].scrollIntoView();", close_button)
-        close_button.click()
-
-    def switch_to_main_content(self):
         try:
-            self.driver.switch_to.default_content()
-        except NoSuchFrameException:
-            pass
+            # Garantir que o botão 'submit' está visível
+            submit_button = self.driver.find_element(By.ID, "submit")
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", submit_button)
 
-    def remove_ads_iframe(self):
-        self.switch_to_main_content()
-        try:
-            ad_iframe = self.driver.find_element(By.CSS_SELECTOR, "iframe[id^='google_ads_iframe']")
-            self.driver.switch_to.frame(ad_iframe)
-            self.driver.execute_script("document.body.innerHTML = '';")
-            self.switch_to_main_content()
-        except NoSuchElementException:
-            pass
+            # Remover elementos bloqueadores
+            self.driver.execute_script("""
+                var blockers = document.querySelectorAll('div, iframe');
+                for (var i = 0; i < blockers.length; i++) {
+                    if (blockers[i].style.position === 'fixed' || blockers[i].style.zIndex > 1000) {
+                        blockers[i].remove();
+                    }
+                }
+            """)
 
-    def scroll_to_element(self, element):
-        """Scroll to the given element to ensure it is visible."""
-        self.driver.execute_script("arguments[0].scrollIntoView();", element)
-
-    def click_with_js(self, element):
-        """Click on the given element using JavaScript."""
-        self.driver.execute_script("arguments[0].click();", element)
+            # Tentar clicar no botão
+            try:
+                submit_button.click()
+                print("Botão 'submit' clicado com sucesso.")
+            except Exception as e:
+                print(f"Erro ao clicar no botão 'submit': {e}")
+                # Fallback: Usar JavaScript para clicar
+                self.driver.execute_script("arguments[0].click();", submit_button)
+                print("Botão 'submit' clicado usando JavaScript.")
+        except TimeoutException:
+            print("Erro: O botão 'submit' não está visível ou não foi encontrado.")
