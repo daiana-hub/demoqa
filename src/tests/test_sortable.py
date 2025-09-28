@@ -52,19 +52,26 @@ class TestSortable(unittest.TestCase):
 
         # Obter os textos dos itens antes de ordenar
         original_items = sortable_page.get_sorted_items_text()
+        print("Itens originais:", original_items)
 
         # Verificar se os itens já estão em ordem crescente
         if original_items != sorted(original_items):
             sorted_items = sorted(original_items)  # Ordenar os textos em ordem crescente
+            print("Ordenando itens para:", sorted_items)
 
             # Reorganizar os itens na ordem crescente verticalmente
             for current_index, item_text in enumerate(sorted_items):
                 target_index = original_items.index(item_text)
                 if target_index != current_index:  # Mover apenas se necessário
+                    print(f"Movendo item '{item_text}' de {target_index} para {current_index}")
                     sortable_page.drag_and_drop_item(target_index, current_index)
+
+                    # Atualizar a lista original após cada movimento
+                    original_items.insert(current_index, original_items.pop(target_index))
 
             # Validar a nova ordem
             final_items = sortable_page.get_sorted_items_text()
+            print("Itens finais:", final_items)
             assert final_items == sorted_items, f"Itens não estão em ordem crescente: {final_items}"
         else:
             print("Os itens já estão em ordem crescente.")

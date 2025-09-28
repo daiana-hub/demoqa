@@ -6,25 +6,36 @@ from selenium.webdriver.support import expected_conditions as EC
 class SortablePage:
     def __init__(self, driver):
         self.driver = driver
-        self.sortable_items = (By.CSS_SELECTOR, ".vertical-list-container .list-group-item")  # Atualizei o seletor para localizar os itens corretamente
-        self.sortable_container = (By.ID, "sortable")  # Contêiner principal do Sortable
+        self.sortable_items = (By.CSS_SELECTOR, "#sortableContainer .vertical-list-container .list-group-item")
+        self.sortable_container = (By.ID, "sortableContainer")  # Updated selector for the sortable container
+        self.list_tab = (By.ID, "demo-tab-list")  # Selector for the List tab
+
+    def ensure_list_tab_active(self):
+        try:
+            # Ensure the "List" tab is active
+            list_tab_element = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable(self.list_tab)
+            )
+            if not list_tab_element.get_attribute("class").__contains__("active"):
+                list_tab_element.click()
+        except Exception as e:
+            print("Error ensuring List tab is active:", e)
+            raise
+
+    def remove_ads(self):
+        try:
+            # Remove ads using JavaScript
+            self.driver.execute_script(
+                "document.querySelectorAll('[id^=Ad], iframe').forEach(ad => ad.remove());"
+            )
+        except Exception as e:
+            print("Error removing ads:", e)
 
     def drag_and_drop_item(self, source_index, target_index):
         try:
-            # Salvar o estado da página antes de localizar o contêiner
-            with open("sortable_page_source_before_wait.html", "w", encoding="utf-8") as f:
-                f.write(self.driver.page_source)
+            self.remove_ads()  # Remove ads before interacting
+            self.ensure_list_tab_active()  # Ensure the List tab is active
 
-            # Aguarde o carregamento completo da página
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-
-            # Salvar o estado da página antes de localizar o contêiner
-            with open("sortable_container_source_before_wait.html", "w", encoding="utf-8") as f:
-                f.write(self.driver.page_source)
-
-            # Aguarde o contêiner principal estar visível
             WebDriverWait(self.driver, 15).until(
                 EC.visibility_of_element_located(self.sortable_container)
             )
@@ -35,46 +46,32 @@ class SortablePage:
             source = items[source_index]
             target = items[target_index]
 
-            # Garantir que os elementos estejam visíveis na viewport
             self.driver.execute_script("arguments[0].scrollIntoView(true);", source)
             self.driver.execute_script("arguments[0].scrollIntoView(true);", target)
 
             actions = ActionChains(self.driver)
             actions.click_and_hold(source).move_to_element(target).release().perform()
         except Exception as e:
-            # Salvar o código-fonte da página para depuração
             with open("sortable_page_source_error.html", "w", encoding="utf-8") as f:
                 f.write(self.driver.page_source)
-            print("Erro ao realizar drag and drop:", e)
+            print("Error during drag and drop:", e)
             raise
 
     def get_sorted_items_text(self):
         try:
-            # Garantir que a tela role até o meio para visibilidade dos elementos
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
+            self.remove_ads()  # Remove ads before interacting
+            self.ensure_list_tab_active()  # Ensure the List tab is active
 
-            # Salvar o estado da página antes de localizar os itens
-            with open("sortable_items_source_before_wait.html", "w", encoding="utf-8") as f:
-                f.write(self.driver.page_source)
-
-            # Aguarde o carregamento completo da página
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-
-            # Aguarde o contêiner principal estar visível
-            WebDriverWait(self.driver, 15).until(
+            WebDriverWait(self.driver, 20).until(
                 EC.visibility_of_element_located(self.sortable_container)
             )
 
-            # Localizar os itens ordenáveis
-            items = WebDriverWait(self.driver, 15).until(
+            items = WebDriverWait(self.driver, 20).until(
                 EC.presence_of_all_elements_located(self.sortable_items)
             )
             return [item.text for item in items]
         except Exception as e:
-            # Salvar o estado da página em caso de erro
             with open("sortable_items_source_error.html", "w", encoding="utf-8") as f:
                 f.write(self.driver.page_source)
-            print("Erro ao obter os itens ordenáveis:", e)
+            print("Error getting sorted items text:", e)
             raise
