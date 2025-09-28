@@ -39,10 +39,18 @@ class TestPracticeForm(unittest.TestCase):
         self.driver.execute_cdp_cmd("Network.setBlockedURLs", {"urls": ["*googlesyndication.com*", "*adservice.google.com*", "*doubleclick.net*"]})
         self.driver.execute_cdp_cmd("Network.enable", {})
 
+    def scroll_to_element(self, element):
+        self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
+
     def test_fill_form(self):
         # Navigate to Practice Form
-        self.driver.find_element(By.XPATH, "//h5[text()='Forms']").click()
-        self.driver.find_element(By.XPATH, "//span[text()='Practice Form']").click()
+        forms_section = self.driver.find_element(By.XPATH, "//h5[text()='Forms']")
+        self.scroll_to_element(forms_section)
+        forms_section.click()
+
+        practice_form = self.driver.find_element(By.XPATH, "//span[text()='Practice Form']")
+        self.scroll_to_element(practice_form)
+        practice_form.click()
 
         # Interact with Practice Form page
         practice_form_page = PracticeFormPage(self.driver)

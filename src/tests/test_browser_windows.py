@@ -1,5 +1,9 @@
 import unittest
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 from pages.browser_windows_page import BrowserWindowsPage
 
 class TestBrowserWindows(unittest.TestCase):
@@ -8,11 +12,32 @@ class TestBrowserWindows(unittest.TestCase):
         self.driver = webdriver.Chrome()
         self.driver.maximize_window()
         self.driver.get("https://demoqa.com/")
+        self.remove_ads_iframe()
+
+    def remove_ads_iframe(self):
+        try:
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='google_ads_iframe']"))
+            )
+            self.driver.execute_script("""
+                var ads = document.querySelectorAll("iframe[id^='google_ads_iframe']");
+                ads.forEach(ad => ad.remove());
+            """)
+        except TimeoutException:
+            pass
+
+    def scroll_to_element(self, element):
+        self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
 
     def test_new_window(self):
         # Navigate to Alerts, Frame & Windows > Browser Windows
-        self.driver.find_element_by_xpath("//h5[text()='Alerts, Frame & Windows']").click()
-        self.driver.find_element_by_xpath("//span[text()='Browser Windows']").click()
+        alerts_frame_windows = self.driver.find_element(By.XPATH, "//h5[text()='Alerts, Frame & Windows']")
+        self.scroll_to_element(alerts_frame_windows)
+        alerts_frame_windows.click()
+
+        browser_windows = self.driver.find_element(By.XPATH, "//span[text()='Browser Windows']")
+        self.scroll_to_element(browser_windows)
+        browser_windows.click()
 
         # Interact with Browser Windows page
         browser_windows_page = BrowserWindowsPage(self.driver)
